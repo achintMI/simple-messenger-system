@@ -40,3 +40,10 @@ def login():
         return jsonify({'status': 'failure', 'message': 'invalid credentials, incorrect passcode'}), 401
 
     return jsonify({'status': 'success', 'token': user.generate_token()}), 200
+
+
+@messaging_bp.route('/get/users', methods=['GET'])
+def get_users():
+    users = Users.query.with_entities(Users.username).all()
+    users_list = [u.username for u in users]
+    return jsonify({'status': 'success', 'data': users_list}), 200
