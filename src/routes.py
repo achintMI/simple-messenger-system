@@ -1,8 +1,11 @@
-import bcrypt
+from datetime import datetime
+
 import jwt
 from flask import Blueprint, request, jsonify
+from sqlalchemy import func
+
 from src.extensions import db
-from src.models import Users, Messages, TOKEN_SECRET_KEY
+from src.models import Users, Messages, LastRead, TOKEN_SECRET_KEY
 
 messaging_bp = Blueprint('messaging', __name__)
 
@@ -94,4 +97,50 @@ def send_text(user):
     db.session.add(new_message)
     db.session.commit()
     return jsonify({'status': 'success'}), 201
+
+
+@messaging_bp.route('/get/unread', methods=['GET'])
+@verify_token
+def get_unread(user):
+    last_read = LastRead.query.filter_by(user_id=user.id).first()
+    if last_read:
+        last_read_timestamp = last_read.last_read_at
+        last_read.last_read_at = datetime.utcnow()
+    else:
+        last_read_timestamp = datetime.min
+        last_read = LastRead(user_id=user.id)
+
+    db.session.add(last_read)
+    db.session.commit()
+
+    unread_messages_data = (
+        db.session.query(Messages.sender_id, Messages.message, Users.username)
+        .join(Users, Messages.sender_id == Users.id)
+        .filter(Messages.sent_at > last_read_timestamp)
+        .all()
+    )
+
+    unread_messages_list = []
+    total_unread_count = 0
+    for sender_id, message_text, sender_username in unread_messages_data:
+        total_unread_count += 1
+        for msg_data in unread_messages_list:
+            if msg_data['username'] == sender_username:
+                msg_data['texts'].append(message_text)
+                break
+        else:
+            unread_messages_list.append({'username': sender_username, 'texts': [message_text]})
+
+    if total_unread_count == 0:
+        message = "No new messages"
+    else:
+        message = f'You have {total_unread_count} new message' + ('s' if total_unread_count > 1 else '')
+
+    response_data = {
+        'status': 'success',
+        'message': message,
+        'data': unread_messages_list
+    }
+
+    return jsonify(response_data), 200
 

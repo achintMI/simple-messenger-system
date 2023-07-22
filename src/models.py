@@ -45,9 +45,8 @@ class Messages(db.Model):
         return '<Message %r>' % self.id
 
 
-class UserInteractions(db.Model):
-    __tablename__ = "user_interactions"
+class LastRead(db.Model):
+    __tablename__ = "last_read"
     id = db.Column(db.Integer, primary_key=True)
-    user1_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    user2_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    last_interaction = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    last_read_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
