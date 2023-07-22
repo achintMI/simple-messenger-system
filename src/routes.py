@@ -2,7 +2,6 @@ from datetime import datetime
 
 import jwt
 from flask import Blueprint, request, jsonify
-from sqlalchemy import func
 
 from src.extensions import db
 from src.models import Users, Messages, LastRead, TOKEN_SECRET_KEY
