@@ -144,3 +144,32 @@ def get_unread(user):
 
     return jsonify(response_data), 200
 
+
+@messaging_bp.route('/get/history', methods=['GET'])
+@verify_token
+def get_history(user):
+    from_username = request.args.get('fromusername')
+    if not from_username:
+        return jsonify({'status': 'failure', 'message': 'Please provide the fromusername parameter.'}), 400
+
+    from_user = Users.query.filter_by(username=from_username).first()
+    if not from_user:
+        return jsonify({'status': 'failure', 'message': 'fromusername not found.'}), 404
+
+    chat_history = (
+        Messages.query.filter(
+            (Messages.sender_id == user.id) & (Messages.receiver_id == from_user.id) |
+            (Messages.sender_id == from_user.id) & (Messages.receiver_id == user.id)
+        )
+        .order_by(Messages.sent_at)
+        .all()
+    )
+
+    chat_history_list = [message.message for message in chat_history]
+
+    response_data = {
+        'status': 'success',
+        'texts': chat_history_list
+    }
+
+    return jsonify(response_data), 200
