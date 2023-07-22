@@ -1,9 +1,36 @@
 import bcrypt
+import jwt
 from flask import Blueprint, request, jsonify
 from src.extensions import db
-from src.models import Users
+from src.models import Users, Messages, TOKEN_SECRET_KEY
 
 messaging_bp = Blueprint('messaging', __name__)
+
+
+def verify_token(f):
+    def decorated_function(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'message': 'Missing token. Please provide a valid token.'}), 401
+
+        try:
+            payload = jwt.decode(token, TOKEN_SECRET_KEY, algorithms=['HS256'])
+            user_id = payload['user_id']
+            user = Users.query.get(user_id)
+            if not user:
+                return jsonify({'message': 'Invalid token. User not found.'}), 401
+
+            # Add the user object to the function arguments so we can access it in the API endpoint
+            kwargs['user'] = user
+            return f(*args, **kwargs)
+
+        except jwt.ExpiredSignatureError:
+            return jsonify({'message': 'Token has expired. Please log in again.'}), 401
+        except jwt.InvalidTokenError:
+            return jsonify({'message': 'Invalid token. Please provide a valid token.'}), 401
+
+    decorated_function.__name__ = f.__name__
+    return decorated_function
 
 
 @messaging_bp.route('/create/user', methods=["post"])
@@ -47,3 +74,24 @@ def get_users():
     users = Users.query.with_entities(Users.username).all()
     users_list = [u.username for u in users]
     return jsonify({'status': 'success', 'data': users_list}), 200
+
+
+@messaging_bp.route('/send/text/user', methods=['POST'])
+@verify_token
+def send_text(user):
+    data = request.get_json()
+    receiver_username = data.get('tousername', None)
+    message_text = data.get('text', None)
+
+    if not receiver_username or not message_text:
+        return jsonify({'status': 'failure', 'message': 'receiver and message content are required'}), 400
+
+    receiver = Users.query.filter_by(username=receiver_username).first()
+    if not receiver:
+        return jsonify({'status': 'failure', 'message': 'receiver not found'}), 404
+
+    new_message = Messages(sender_id=user.id, receiver_id=receiver.id, message=message_text)
+    db.session.add(new_message)
+    db.session.commit()
+    return jsonify({'status': 'success'}), 201
+

@@ -7,7 +7,6 @@ TOKEN_SECRET_KEY = "token_secret_key"
 
 
 class Users(db.Model):
-
     __tablename__ = 'users'
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
@@ -32,3 +31,23 @@ class Users(db.Model):
 
     def verify_password(self, passcode):
         return check_password_hash(self.passcode, passcode)
+
+
+class Messages(db.Model):
+    __tablename__ = "messages"
+    id = db.Column(db.Integer, primary_key=True)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    sent_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return '<Message %r>' % self.id
+
+
+class UserInteractions(db.Model):
+    __tablename__ = "user_interactions"
+    id = db.Column(db.Integer, primary_key=True)
+    user1_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user2_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    last_interaction = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
