@@ -11,6 +11,8 @@ class Users(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(50), unique=True, nullable=False)
     passcode = db.Column(db.String(128), nullable=False)
+    tokens = db.relationship('Tokens', backref='user', lazy=True)
+    last_reads = db.relationship('LastRead', backref='user', lazy=True)
 
     def generate_token(self):
         expiration = datetime.utcnow() + timedelta(hours=1)
@@ -50,3 +52,10 @@ class LastRead(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     last_read_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class Tokens(db.Model):
+    __tablename__ = 'tokens'
+    id = db.Column(db.Integer, primary_key=True)
+    token = db.Column(db.String(500), unique=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)

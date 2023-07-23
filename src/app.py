@@ -4,6 +4,7 @@ from src.extensions import db, migrate
 
 app = Flask(__name__)
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///messaging.db"
+# app.config['SQLALCHEMY_ECHO'] = True
 db.init_app(app)
 migrate.init_app(app, db)
 

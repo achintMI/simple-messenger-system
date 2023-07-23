@@ -4,7 +4,7 @@ import jwt
 from flask import Blueprint, request, jsonify
 
 from src.extensions import db
-from src.models import Users, Messages, LastRead, TOKEN_SECRET_KEY
+from src.models import Users, Messages, LastRead, Tokens, TOKEN_SECRET_KEY
 
 messaging_bp = Blueprint('messaging', __name__)
 
@@ -20,6 +20,10 @@ def verify_token(f):
             user_id = payload['user_id']
             user = Users.query.get(user_id)
             if not user:
+                return jsonify({'message': 'Invalid token. User not found.'}), 401
+
+            token_entry = Tokens.query.filter_by(token=token, user_id=user_id).first()
+            if not token_entry:
                 return jsonify({'message': 'Invalid token. User not found.'}), 401
 
             # Add the user object to the function arguments so we can access it in the API endpoint
@@ -68,7 +72,12 @@ def login():
     if not user.verify_password(passcode):
         return jsonify({'status': 'failure', 'message': 'invalid credentials, incorrect passcode'}), 401
 
-    return jsonify({'status': 'success', 'token': user.generate_token()}), 200
+    token = user.generate_token()
+    token_entry = Tokens(token=token, user_id=user.id)
+    db.session.add(token_entry)
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'token': token}), 200
 
 
 @messaging_bp.route('/get/users', methods=['GET'])
@@ -91,6 +100,9 @@ def send_text(user):
     receiver = Users.query.filter_by(username=receiver_username).first()
     if not receiver:
         return jsonify({'status': 'failure', 'message': 'receiver not found'}), 404
+
+    if receiver == user:
+        return jsonify({'status': 'failure', 'message': 'cannot send self message'}), 404
 
     new_message = Messages(sender_id=user.id, receiver_id=receiver.id, message=message_text)
     db.session.add(new_message)
@@ -116,6 +128,7 @@ def get_unread(user):
         db.session.query(Messages.sender_id, Messages.message, Users.username)
         .join(Users, Messages.sender_id == Users.id)
         .filter(Messages.sent_at > last_read_timestamp)
+        .filter(Messages.receiver_id == user.id)
         .all()
     )
 
@@ -157,7 +170,6 @@ def get_history(user):
 
     chat_history = (
         Messages.query.filter(
-            (Messages.sender_id == user.id) & (Messages.receiver_id == from_user.id) |
             (Messages.sender_id == from_user.id) & (Messages.receiver_id == user.id)
         )
         .order_by(Messages.sent_at)
@@ -172,3 +184,42 @@ def get_history(user):
     }
 
     return jsonify(response_data), 200
+
+
+@messaging_bp.route('/logout', methods=['POST'])
+def logout():
+    token = request.headers.get('Authorization')
+    if not token:
+        return jsonify({'status': 'failure', 'message': 'Missing token. Please provide a valid token.'}), 401
+    token_entry = Tokens.query.filter_by(token=token).first()
+    if not token_entry:
+        return jsonify({'status': 'failure', 'message': 'Invalid token. User not found.'}), 401
+
+    if not token_entry:
+        return jsonify({'status': 'failure', 'message': 'Invalid token. User not found.'}), 401
+
+    db.session.delete(token_entry)
+    db.session.commit()
+
+    return jsonify({'status': 'success'}), 200
+
+
+@messaging_bp.route('/send/text/group', methods=['POST'])
+@verify_token
+def send_group_message(user):
+    data = request.json
+    receiver_usernames = data.get('tousernames')
+    message_text = data.get('text')
+
+    if not receiver_usernames or not message_text:
+        return jsonify({'status': 'failure', 'message': 'tousernames and texts are required.'}), 400
+
+    receivers = Users.query.filter(Users.username.in_(receiver_usernames)).filter(Users.id != user.id).all()
+    if not receivers:
+        return jsonify({'status': 'failure', 'message': 'No valid receivers found.'}), 404
+
+    messages = [Messages(sender_id=user.id, receiver_id=receiver.id, message=message_text) for receiver in receivers]
+    db.session.add_all(messages)
+    db.session.commit()
+
+    return jsonify({'status': 'success', 'message': 'Group message sent successfully.'}), 200
