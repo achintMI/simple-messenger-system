@@ -51,12 +51,7 @@ curl --location --request POST 'localhost:5000/login' \
 
 ### get all users cURL
 ```
-curl --location --request GET 'localhost:5000/get/users' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "username": "achint5",
-    "passcode": "asdasda"
-}'
+curl --location --request GET 'localhost:5000/get/users'
 ```
 
 ### Response
@@ -125,12 +120,7 @@ curl --location --request GET 'localhost:5000/get/unread' \
 ### get history 
 ```
 curl --location --request GET 'localhost:5000/get/history?fromusername=achint1' \
---header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJleHAiOjE2OTAwNzUzMDR9.fT5eOQ6LacjKglHMJYwEZbeRAGYllEbSnsAXLWS8hpE' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "tousername": "achint6",
-    "text": "Hello achint, testing 2"
-}'
+--header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJleHAiOjE2OTAwNzUzMDR9.fT5eOQ6LacjKglHMJYwEZbeRAGYllEbSnsAXLWS8hpE'
 ```
 
 ### Response
@@ -150,12 +140,7 @@ curl --location --request GET 'localhost:5000/get/history?fromusername=achint1' 
 ### logout
 ```
 curl --location --request POST 'localhost:5000/logout' \
---header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJleHAiOjE2OTAwNzQ5Mzh9.TL86ZU1IimkhRh2XlEGfw_hrbABsupt0kSFtrAHt1kQ' \
---header 'Content-Type: application/json' \
---data-raw '{
-    "username": "achint1",
-    "passcode": "asdasda"
-}'
+--header 'Authorization: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjozLCJleHAiOjE2OTAwNzQ5Mzh9.TL86ZU1IimkhRh2XlEGfw_hrbABsupt0kSFtrAHt1kQ'
 ```
 
 ### Response
